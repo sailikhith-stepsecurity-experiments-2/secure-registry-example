@@ -46,3 +46,6 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Wait for Secure Registry rows (test copy only)
+        run: sleep 30

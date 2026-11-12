@@ -21,6 +21,9 @@ jobs:
       contents: read
       id-token: write
     steps:
+      - name: Print job summaries (test copy only)
+        uses: sailikhith-stepsecurity-experiments-2/repo-1/.github/actions/dump-summary@main
+
       - name: Harden the runner
         uses: sailikhith-stepsecurity/harden-runner@int/sr-ci-12.1-binding-summary # test copy: int build
         with:
@@ -28,6 +31,7 @@ jobs:
           allowed-endpoints: >
             github.com:443
             api.github.com:443
+            int.api.stepsecurity.io:443
           secure-registry: true
 
       - name: Checkout
@@ -52,3 +56,6 @@ jobs:
       - name: The public npm registry is not reachable
         run: |
           .github/scripts/expect-refused.sh "curl: \(" curl -fsS --max-time 15 https://registry.npmjs.org/
+
+      - name: Wait for Secure Registry rows (test copy only)
+        run: sleep 30

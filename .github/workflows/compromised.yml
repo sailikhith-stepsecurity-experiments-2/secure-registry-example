@@ -24,6 +24,9 @@ jobs:
       contents: read
       id-token: write
     steps:
+      - name: Print job summaries (test copy only)
+        uses: sailikhith-stepsecurity-experiments-2/repo-1/.github/actions/dump-summary@main
+
       - name: Harden the runner
         uses: sailikhith-stepsecurity/harden-runner@int/sr-ci-12.1-binding-summary # test copy: int build
         with:
@@ -56,3 +59,6 @@ jobs:
         working-directory: ${{ runner.temp }}
         run: |
           "$GITHUB_WORKSPACE/.github/scripts/expect-refused.sh" "hidden by your registry policy" npm install --no-save @harden-runner-canary/basic-npm-package@1.5.0
+
+      - name: Wait for Secure Registry rows (test copy only)
+        run: sleep 30

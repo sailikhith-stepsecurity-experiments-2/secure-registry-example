@@ -24,6 +24,9 @@ jobs:
       contents: read
       id-token: write
     steps:
+      - name: Print job summaries (test copy only)
+        uses: sailikhith-stepsecurity-experiments-2/repo-1/.github/actions/dump-summary@main
+
       - name: Harden the runner
         uses: sailikhith-stepsecurity/harden-runner@int/sr-ci-12.1-binding-summary # test copy: int build
         with:
@@ -54,3 +57,6 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Wait for Secure Registry rows (test copy only)
+        run: sleep 30
