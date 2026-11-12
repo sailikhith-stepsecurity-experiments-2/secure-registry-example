@@ -50,8 +50,20 @@ jobs:
         env:
           VERSION: ${{ steps.nightly.outputs.version }}
         run: |
+          # Nightly versions carry their build date, for example 7.1.0-dev.20261111.1.
+          built=$(echo "$VERSION" | sed -nE 's/.*-dev\.([0-9]{8}).*/\1/p')
+          age_days=-1
+          if [ -n "$built" ]; then
+            age_days=$(( ($(date -u +%s) - $(date -u -d "$built" +%s)) / 86400 ))
+            echo "typescript@$VERSION was built on $built, about $age_days day(s) ago"
+          fi
+
           if npm install --no-save "typescript@$VERSION" > install.log 2>&1; then
             cat install.log
+            if [ "$age_days" -ge 0 ] && [ "$age_days" -lt 2 ]; then
+              echo "::error title=Not held::typescript@$VERSION is newer than the 2-day cooldown, but it was installed."
+              exit 1
+            fi
             echo "::warning title=Nothing held::typescript@$VERSION is older than the cooldown, so it was installed. Run this workflow again after the next nightly build."
             exit 0
           fi

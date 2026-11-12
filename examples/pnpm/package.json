@@ -5,7 +5,7 @@
   "description": "pnpm install through Secure Registry",
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test test/semver.test.js"
   },
   "dependencies": {
     "semver": "^7.7.0"
