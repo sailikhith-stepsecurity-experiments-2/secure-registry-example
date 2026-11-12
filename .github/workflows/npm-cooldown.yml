@@ -8,7 +8,7 @@
 # (typescript@next), which is usually less than a day old:
 #   - "held": default settings. npm cannot see the version, so the install fails.
 #   - "exempted": the same install, with TypeScript exempted from the cooldown.
-name: 2. Cooldown and exemptions
+name: "npm: 2. Cooldown and exemptions"
 
 on:
   push:
@@ -41,11 +41,12 @@ jobs:
           persist-credentials: false
 
       - name: Check that npm uses Secure Registry
-        run: .github/scripts/require-secure-registry.sh
+        run: |
+          "$GITHUB_WORKSPACE/.github/scripts/require-secure-registry.sh" npm
 
       - name: Find the latest nightly TypeScript
         id: nightly
-        run: .github/scripts/typescript-nightly.sh
+        run: .github/scripts/npm/typescript-nightly.sh
 
       - name: Install it (held by the cooldown)
         working-directory: ${{ runner.temp }}
@@ -105,11 +106,12 @@ jobs:
           persist-credentials: false
 
       - name: Check that npm uses Secure Registry
-        run: .github/scripts/require-secure-registry.sh
+        run: |
+          "$GITHUB_WORKSPACE/.github/scripts/require-secure-registry.sh" npm
 
       - name: Find the latest nightly TypeScript
         id: nightly
-        run: .github/scripts/typescript-nightly.sh
+        run: .github/scripts/npm/typescript-nightly.sh
 
       - name: Install it (exempted from the cooldown)
         working-directory: ${{ runner.temp }}

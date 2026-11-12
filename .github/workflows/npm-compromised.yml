@@ -3,10 +3,10 @@
 # Versions that StepSecurity has flagged as compromised are always refused.
 # This protection is always on and cannot be exempted.
 #
-# examples/compromised pins @harden-runner-canary/basic-npm-package@1.5.0, a
+# npm/compromised pins @harden-runner-canary/basic-npm-package@1.5.0, a
 # StepSecurity test package that is flagged as compromised on purpose. It is
 # harmless: it has no install scripts and only exports a "Hello, world!" function.
-name: 4. Compromised package
+name: "npm: 4. Compromised package"
 
 on:
   push:
@@ -23,6 +23,9 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    defaults:
+      run:
+        working-directory: npm/compromised
     steps:
       - name: Print job summaries (test copy only)
         uses: sailikhith-stepsecurity-experiments-2/repo-1/.github/actions/dump-summary@main
@@ -42,14 +45,15 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
+          # A restored dependency cache is never checked by Secure Registry.
           package-manager-cache: false
 
       - name: Check that npm uses Secure Registry
-        run: .github/scripts/require-secure-registry.sh
+        run: |
+          "$GITHUB_WORKSPACE/.github/scripts/require-secure-registry.sh" npm
 
       # The lockfile pins the compromised version, so the download is refused.
       - name: Install from the lockfile (refused)
-        working-directory: examples/compromised
         run: |
           "$GITHUB_WORKSPACE/.github/scripts/expect-refused.sh" "is blocked by security policy with StepSecurity" npm ci
 

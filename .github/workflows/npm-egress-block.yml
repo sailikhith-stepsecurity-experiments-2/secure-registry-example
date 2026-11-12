@@ -3,7 +3,7 @@
 # With egress-policy: block, Harden-Runner allows Secure Registry
 # automatically. registry.npmjs.org is not in allowed-endpoints, so nothing in
 # the job can download packages around Secure Registry.
-name: 6. Egress block
+name: "npm: 6. Egress block"
 
 on:
   push:
@@ -20,6 +20,9 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    defaults:
+      run:
+        working-directory: npm/app
     steps:
       - name: Print job summaries (test copy only)
         uses: sailikhith-stepsecurity-experiments-2/repo-1/.github/actions/dump-summary@main
@@ -45,7 +48,8 @@ jobs:
         run: node --version
 
       - name: Check that npm uses Secure Registry
-        run: .github/scripts/require-secure-registry.sh
+        run: |
+          "$GITHUB_WORKSPACE/.github/scripts/require-secure-registry.sh" npm
 
       - name: Install dependencies
         run: npm ci
@@ -55,7 +59,7 @@ jobs:
 
       - name: The public npm registry is not reachable
         run: |
-          .github/scripts/expect-refused.sh "curl: \(" curl -fsS --max-time 15 https://registry.npmjs.org/
+          "$GITHUB_WORKSPACE/.github/scripts/expect-refused.sh" "curl: \(" curl -fsS --max-time 15 https://registry.npmjs.org/
 
       - name: Wait for Secure Registry rows (test copy only)
         run: sleep 30

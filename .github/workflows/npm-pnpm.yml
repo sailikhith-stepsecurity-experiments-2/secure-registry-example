@@ -6,7 +6,7 @@
 # pnpm/action-setup installs pnpm itself with npm, so that goes through Secure
 # Registry as well. If a pnpm release is newer than the cooldown, the job
 # summary lists it under Held. That is expected and does not fail the job.
-name: 7. pnpm
+name: "npm: 7. pnpm"
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
       id-token: write
     defaults:
       run:
-        working-directory: examples/pnpm
+        working-directory: npm/pnpm
     steps:
       - name: Print job summaries (test copy only)
         uses: sailikhith-stepsecurity-experiments-2/repo-1/.github/actions/dump-summary@main
@@ -50,10 +50,12 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
+          # A restored dependency cache is never checked by Secure Registry.
           package-manager-cache: false
 
       - name: Check that pnpm uses Secure Registry
-        run: ../../.github/scripts/require-secure-registry.sh pnpm
+        run: |
+          "$GITHUB_WORKSPACE/.github/scripts/require-secure-registry.sh" pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
