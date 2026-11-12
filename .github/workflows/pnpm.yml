@@ -2,6 +2,10 @@
 #
 # pnpm reads the npm configuration that Harden-Runner writes, so with
 # pnpm-lock.yaml every package is downloaded through Secure Registry.
+#
+# pnpm/action-setup installs pnpm itself with npm, so that goes through Secure
+# Registry as well. If a pnpm release is newer than the cooldown, the job
+# summary lists it under Held. That is expected and does not fail the job.
 name: 7. pnpm
 
 on:

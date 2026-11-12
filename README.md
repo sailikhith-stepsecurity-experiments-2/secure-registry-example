@@ -71,7 +71,7 @@ Each workflow in [`.github/workflows`](.github/workflows) shows one scenario. Th
 | [4. Compromised package](.github/workflows/compromised.yml) | `secure-registry: true` | A lockfile that pins a version flagged as compromised fails with `E403`. |
 | [5. Audit mode](.github/workflows/audit-mode.yml) | `mode: audit` and the same block list | `npm ci` passes. The job summary lists `ms@2.1.3` under **Would be blocked**. |
 | [6. Egress block](.github/workflows/egress-block.yml) | `egress-policy: block` | Installs go through Secure Registry. The public npm registry is not reachable from the job. |
-| [7. pnpm](.github/workflows/pnpm.yml) | `secure-registry: true` | `pnpm install --frozen-lockfile` downloads every package through Secure Registry. |
+| [7. pnpm](.github/workflows/pnpm.yml) | `secure-registry: true` | `pnpm install --frozen-lockfile` downloads every package through Secure Registry. `pnpm/action-setup` installs pnpm through Secure Registry too, so a pnpm release newer than the cooldown can be listed under **Held**. That is expected. |
 
 The compromised package example uses `@harden-runner-canary/basic-npm-package@1.5.0`, a StepSecurity test package that is flagged on purpose. It is harmless: it has no install scripts.
 
@@ -113,6 +113,8 @@ When anything was held, blocked or would have been blocked, the job summary has 
 
 Each table shows up to 5 rows, with a link to the full list in run insights.
 
+The summary is written when the job ends. Requests from the last few seconds of the job may not be in it yet. Run insights has the complete list.
+
 ### Run insights
 
 Every run of a job with Harden-Runner has insights in the StepSecurity dashboard at:
@@ -121,7 +123,7 @@ Every run of a job with Harden-Runner has insights in the StepSecurity dashboard
 https://app.stepsecurity.io/github/<owner>/<repo>/actions/runs/<run-id>
 ```
 
-The **Packages** tab lists each package and version the job pulled through Secure Registry, with the decision for each. The **Network events** tab shows the Secure Registry host. It can also show `registry.npmjs.org`, which is expected in some cases. See [Calls to the public registry](#calls-to-the-public-registry).
+The **Packages** tab lists each package and version the job pulled through Secure Registry, with the decision for each. The **Network events** tab shows the Secure Registry host. It can also show `registry.npmjs.org`, which is expected in some cases. With `egress-policy: block`, calls to `registry.npmjs.org` show as blocked. See [Calls to the public registry](#calls-to-the-public-registry).
 
 ## Configuration
 
