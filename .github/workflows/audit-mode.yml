@@ -1,0 +1,52 @@
+# Audit mode.
+#
+# Packages still go through Secure Registry, but nothing is refused. The job
+# summary lists what would have been blocked in enforce mode. Use it to try
+# Secure Registry on an existing project without breaking builds.
+#
+# The block list matches the "3. Block list" workflow. Here npm ci succeeds,
+# and ms@2.1.3 is listed under "Would be blocked" in the job summary.
+name: 5. Audit mode
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          secure-registry: |
+            ecosystem-defaults:
+              mode: audit
+            npm:
+              block-list:
+                - "ms@2.1.3"
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Install dependencies (not blocked in audit mode)
+        run: npm ci
+
+      - name: Test
+        run: npm test

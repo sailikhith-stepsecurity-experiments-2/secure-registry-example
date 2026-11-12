@@ -1,0 +1,62 @@
+# Custom block list.
+#
+# The block list refuses package versions you name, with glob patterns such as
+# "ms@2.1.3", "lodash@4*", "left-pad@*" or "@example-org/*". Use it for a
+# version your team has decided not to use, before it is flagged anywhere else.
+#
+# The block list here names ms@2.1.3, which this project's lockfile pins
+# (express > debug > ms). ms@2.1.3 is a safe package, chosen only because the
+# lockfile contains it.
+name: 3. Block list
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  blocked:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          secure-registry: |
+            npm:
+              block-list:
+                - "ms@2.1.3"
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      # With a lockfile, npm downloads the pinned version directly, and Secure
+      # Registry refuses the download with E403.
+      - name: Install from the lockfile (refused)
+        run: .github/scripts/expect-refused.sh "E403" npm ci
+
+      # Without a lockfile, the version is hidden from npm. Asking for it by
+      # name fails, and npm prints a notice that names the block list.
+      - name: Install the version by name (hidden)
+        run: |
+          cd "$RUNNER_TEMP"
+          "$GITHUB_WORKSPACE/.github/scripts/expect-refused.sh" "hidden by your registry policy" npm install --no-save ms@2.1.3
+
+      # Other versions of the same package are not affected.
+      - name: Install another version (allowed)
+        working-directory: ${{ runner.temp }}
+        run: npm install --no-save ms@2.1.2

@@ -1,0 +1,19 @@
+{
+  "name": "secure-registry-example",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Reference project for Harden-Runner Secure Registry on public repositories",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  },
+  "license": "Apache-2.0"
+}

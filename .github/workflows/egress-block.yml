@@ -1,0 +1,50 @@
+# Secure Registry with an egress block policy.
+#
+# With egress-policy: block, Harden-Runner allows Secure Registry
+# automatically. registry.npmjs.org is not in allowed-endpoints, so nothing in
+# the job can download packages around Secure Registry.
+name: 6. Egress block
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            github.com:443
+            api.github.com:443
+          secure-registry: true
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Uses the Node.js that is preinstalled on the runner, so no download
+      # endpoint has to be allowed.
+      - name: Node.js version
+        run: node --version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: The public npm registry is not reachable
+        run: |
+          .github/scripts/expect-refused.sh "curl: \(" curl -fsS --max-time 15 https://registry.npmjs.org/
