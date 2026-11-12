@@ -22,7 +22,7 @@ jobs:
       id-token: write
     steps:
       - name: Harden the runner
-        uses: step-security/harden-runner@v2
+        uses: sailikhith-stepsecurity/harden-runner@int/sr-ci-12.1-binding-summary # test copy: int build
         with:
           egress-policy: block
           allowed-endpoints: >
