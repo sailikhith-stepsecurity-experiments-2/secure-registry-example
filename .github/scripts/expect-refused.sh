@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Runs a command that Secure Registry is expected to refuse.
+# Runs a command that Secure Registry is expected to refuse. Works for any
+# package manager.
 #
 #   expect-refused.sh <pattern> <command...>
 #

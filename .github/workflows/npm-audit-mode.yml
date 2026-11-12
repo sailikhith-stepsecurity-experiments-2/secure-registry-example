@@ -4,9 +4,11 @@
 # summary lists what would have been blocked in enforce mode. Use it to try
 # Secure Registry on an existing project without breaking builds.
 #
-# The block list matches the "3. Block list" workflow. Here npm ci succeeds,
-# and ms@2.1.3 is listed under "Would be blocked" in the job summary.
-name: 5. Audit mode
+# ecosystem-defaults applies to every supported ecosystem, so this one setting
+# keeps working as ecosystems are added. The block list matches the
+# "npm: 3. Block list" workflow: here npm ci succeeds, and ms@2.1.3 is listed
+# as "would be blocked" in the job summary.
+name: "npm: 5. Audit mode"
 
 on:
   push:
@@ -23,6 +25,9 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    defaults:
+      run:
+        working-directory: npm/app
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@v2
@@ -44,10 +49,12 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
+          # A restored dependency cache is never checked by Secure Registry.
           package-manager-cache: false
 
       - name: Check that npm uses Secure Registry
-        run: .github/scripts/require-secure-registry.sh
+        run: |
+          "$GITHUB_WORKSPACE/.github/scripts/require-secure-registry.sh" npm
 
       - name: Install dependencies (not blocked in audit mode)
         run: npm ci

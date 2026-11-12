@@ -3,7 +3,7 @@
 # Every npm install in this job goes through StepSecurity Secure Registry:
 # known compromised versions are refused, and versions published less than
 # 2 days ago are held back by the cooldown.
-name: 1. Quick start
+name: "npm: 1. Quick start"
 
 on:
   push:
@@ -21,6 +21,9 @@ jobs:
     permissions:
       contents: read
       id-token: write # optional, recommended: lets GitHub vouch for this repository
+    defaults:
+      run:
+        working-directory: npm/app
     steps:
       # Harden-Runner must be the first step, so that every later step uses Secure Registry.
       - name: Harden the runner
