@@ -21,6 +21,7 @@ permissions:
 jobs:
   held:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       id-token: write
@@ -36,31 +37,22 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Check that npm uses Secure Registry
+        run: .github/scripts/require-secure-registry.sh
+
       - name: Find the latest nightly TypeScript
         id: nightly
-        # Asks the public registry which version the "next" tag points to. Secure
-        # Registry hides that version, so it cannot answer this question.
-        run: |
-          version=$(curl -fsS https://registry.npmjs.org/-/package/typescript/dist-tags | jq -r .next)
-          echo "typescript@next is $version"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+        run: .github/scripts/typescript-nightly.sh
 
       - name: Install it (held by the cooldown)
         working-directory: ${{ runner.temp }}
         env:
           VERSION: ${{ steps.nightly.outputs.version }}
+          AGE_DAYS: ${{ steps.nightly.outputs.age-days }}
         run: |
-          # Nightly versions carry their build date, for example 7.1.0-dev.20261111.1.
-          built=$(echo "$VERSION" | sed -nE 's/.*-dev\.([0-9]{8}).*/\1/p')
-          age_days=-1
-          if [ -n "$built" ]; then
-            age_days=$(( ($(date -u +%s) - $(date -u -d "$built" +%s)) / 86400 ))
-            echo "typescript@$VERSION was built on $built, about $age_days day(s) ago"
-          fi
-
           if npm install --no-save "typescript@$VERSION" > install.log 2>&1; then
             cat install.log
-            if [ "$age_days" -ge 0 ] && [ "$age_days" -lt 2 ]; then
+            if [ "$AGE_DAYS" -lt 2 ]; then
               echo "::error title=Not held::typescript@$VERSION is newer than the 2-day cooldown, but it was installed."
               exit 1
             fi
@@ -68,11 +60,15 @@ jobs:
             exit 0
           fi
           cat install.log
-          grep -q "hidden by your registry policy" install.log
+          if ! grep -q "hidden by your registry policy" install.log; then
+            echo "::error title=Unexpected error::The install failed, but not because of the cooldown."
+            exit 1
+          fi
           echo "::notice title=Held as expected::typescript@$VERSION is newer than the cooldown."
 
   exempted:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       id-token: write
@@ -86,21 +82,25 @@ jobs:
               cooldown:
                 days: 2
                 exemptions:
-                  # Every version of one package. To allow a single release
+                  # Every version of a package. To allow a single release
                   # instead, name the version, for example "left-pad@1.3.0".
                   - "typescript@*"
+                  # Every package in a scope. TypeScript nightlies depend on
+                  # platform packages such as @typescript/typescript-linux-x64,
+                  # which are published at the same time.
+                  - "@typescript/*"
 
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
+      - name: Check that npm uses Secure Registry
+        run: .github/scripts/require-secure-registry.sh
+
       - name: Find the latest nightly TypeScript
         id: nightly
-        run: |
-          version=$(curl -fsS https://registry.npmjs.org/-/package/typescript/dist-tags | jq -r .next)
-          echo "typescript@next is $version"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+        run: .github/scripts/typescript-nightly.sh
 
       - name: Install it (exempted from the cooldown)
         working-directory: ${{ runner.temp }}

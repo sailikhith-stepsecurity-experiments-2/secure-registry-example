@@ -16,6 +16,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       id-token: write
@@ -38,6 +39,9 @@ jobs:
       # endpoint has to be allowed.
       - name: Node.js version
         run: node --version
+
+      - name: Check that npm uses Secure Registry
+        run: .github/scripts/require-secure-registry.sh
 
       - name: Install dependencies
         run: npm ci

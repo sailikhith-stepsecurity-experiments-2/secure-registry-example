@@ -19,6 +19,7 @@ permissions:
 jobs:
   blocked:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       id-token: write
@@ -40,14 +41,18 @@ jobs:
           node-version: 22
           package-manager-cache: false
 
+      - name: Check that npm uses Secure Registry
+        run: .github/scripts/require-secure-registry.sh
+
       # The lockfile pins the compromised version, so the download is refused.
       - name: Install from the lockfile (refused)
         working-directory: examples/compromised
-        run: ../../.github/scripts/expect-refused.sh "E403" npm ci
+        run: |
+          "$GITHUB_WORKSPACE/.github/scripts/expect-refused.sh" "is blocked by security policy with StepSecurity" npm ci
 
       # Without a lockfile, npm cannot see the compromised version and prints
       # a notice that names it.
       - name: Install the version by name (hidden)
+        working-directory: ${{ runner.temp }}
         run: |
-          cd "$RUNNER_TEMP"
           "$GITHUB_WORKSPACE/.github/scripts/expect-refused.sh" "hidden by your registry policy" npm install --no-save @harden-runner-canary/basic-npm-package@1.5.0

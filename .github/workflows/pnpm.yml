@@ -2,9 +2,6 @@
 #
 # pnpm reads the npm configuration that Harden-Runner writes, so with
 # pnpm-lock.yaml every package is downloaded through Secure Registry.
-#
-# The network events for this job also show registry.npmjs.org: that is
-# pnpm/action-setup downloading pnpm itself, which is expected.
 name: 7. pnpm
 
 on:
@@ -18,6 +15,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       id-token: write
@@ -46,6 +44,9 @@ jobs:
         with:
           node-version: 22
           package-manager-cache: false
+
+      - name: Check that pnpm uses Secure Registry
+        run: ../../.github/scripts/require-secure-registry.sh pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

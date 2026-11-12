@@ -19,6 +19,7 @@ permissions:
 jobs:
   audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       id-token: write
@@ -44,6 +45,9 @@ jobs:
         with:
           node-version: 22
           package-manager-cache: false
+
+      - name: Check that npm uses Secure Registry
+        run: .github/scripts/require-secure-registry.sh
 
       - name: Install dependencies (not blocked in audit mode)
         run: npm ci

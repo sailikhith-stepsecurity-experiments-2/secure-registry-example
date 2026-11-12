@@ -10,7 +10,7 @@ With Secure Registry turned on, every npm install in a job goes through StepSecu
 
 It is free for public repositories on GitHub-hosted runners. It supports **npm** and npm-compatible package managers today. Other ecosystems are planned.
 
-Full documentation: [Secure Registry for public repositories](https://docs.stepsecurity.io/<secure-registry-community-page>)
+Full documentation: [docs.stepsecurity.io](https://docs.stepsecurity.io)
 
 ## Add it to your workflow
 
@@ -43,7 +43,7 @@ jobs:
       - run: npm test
 ```
 
-Nothing else changes. `npm ci`, `npm install`, `npx` and `pnpm install` pick up Secure Registry automatically.
+Nothing else changes. `npm ci`, `npm install`, `npx`, and `pnpm install` with a lockfile pick up Secure Registry automatically.
 
 * **`id-token: write`** lets GitHub sign a statement of which repository the job belongs to. It is optional: without it, Secure Registry still protects the job, and packages appear in run insights when Harden-Runner telemetry is reachable.
 * **`package-manager-cache: false`** matters. Packages restored from a cache are never downloaded, so Secure Registry never checks them. See [Dependency caches](#dependency-caches).
@@ -61,12 +61,12 @@ Jobs that do not meet these requirements are never failed. Harden-Runner prints 
 
 ## The examples
 
-Each workflow in [`.github/workflows`](.github/workflows) shows one scenario. They run on every push to `main` (the quick start also runs on pull requests) and can be run by hand from the **Actions** tab. Every workflow passes when Secure Registry behaves as described: steps that are expected to be refused check for the refusal.
+Each workflow in [`.github/workflows`](.github/workflows) shows one scenario. They run on every push to `main` (the quick start also runs on pull requests) and can be run by hand from the **Actions** tab. Steps that are expected to be refused check for the refusal, and each scenario first checks that npm uses Secure Registry (`.github/scripts/require-secure-registry.sh`; your own workflows do not need this). What the job summary shows is written after the last step, so check it on the run page.
 
 | Workflow | Settings | What happens |
 | --- | --- | --- |
 | [1. Quick start](.github/workflows/quick-start.yml) | `secure-registry: true` | `npm ci` and `npm test` pass. All 65 packages in the lockfile go through Secure Registry. |
-| [2. Cooldown and exemptions](.github/workflows/cooldown.yml) | default cooldown, then `cooldown.exemptions` | The latest nightly TypeScript build is less than 2 days old. The first job cannot install it; the second job exempts TypeScript and installs it. |
+| [2. Cooldown and exemptions](.github/workflows/cooldown.yml) | default cooldown, then `cooldown.exemptions` | The latest nightly TypeScript build is usually less than a day old. The first job cannot install it. The second job exempts `typescript@*` and `@typescript/*` (its platform packages, published at the same time) and installs it. |
 | [3. Block list](.github/workflows/block-list.yml) | `block-list: ["ms@2.1.3"]` | `npm ci` fails with `E403`, because the lockfile pins `ms@2.1.3`. `ms@2.1.2` still installs. |
 | [4. Compromised package](.github/workflows/compromised.yml) | `secure-registry: true` | A lockfile that pins a version flagged as compromised fails with `E403`. |
 | [5. Audit mode](.github/workflows/audit-mode.yml) | `mode: audit` and the same block list | `npm ci` passes. The job summary lists `ms@2.1.3` under **Would be blocked**. |
@@ -107,7 +107,7 @@ npm error 403 403 Forbidden - GET https://<secure-registry-host>/javascript/... 
 When anything was held, blocked or would have been blocked, the job summary has a **Secure registry** section:
 
 * **Blocked:** downloads that were refused, with the control and the reason.
-* **Held:** versions hidden by the cooldown.
+* **Held:** versions hidden from npm, with the reason (cooldown, block list or compromised).
 * **Would be blocked:** in audit mode, what enforce mode would have refused.
 * A `secure-registry` snippet you can paste into your workflow to exempt the held versions.
 
@@ -146,18 +146,20 @@ The **Packages** tab lists each package and version the job pulled through Secur
 
 | Setting | Default | Values |
 | --- | --- | --- |
-| `mode` | `enforce` | `enforce` refuses held and blocked versions. `audit` reports them without refusing. `off` leaves the ecosystem on its normal registry. |
+| `mode` | `enforce` | `enforce` refuses held and blocked versions. `audit` reports blocked versions without refusing them. Cooldown holds are not reported in audit mode yet. `off` leaves the ecosystem on its normal registry. |
 | `cooldown.days` | `2` | `0` to `30`. `0` turns the cooldown off. |
 | `cooldown.exemptions` | none | `name@version` for one release, `name@*` for every version of a package, `@scope/*` for a scope. |
 | `block-list` | off | Glob patterns such as `name@1.2.3`, `name@1*`, `name@*` or `@scope/*`. |
 | Compromised packages | on | Always on. Cannot be turned off or exempted. |
 | Typosquatting protection | off | Not available for public repositories. |
+| `ecosystems` (top level) | `all` | `all` covers every supported ecosystem, including ones added later. A list such as `[npm]` covers only those. |
+| `lockfile-resolved` (under `npm`) | `keep` | `omit` stops npm writing registry URLs into `package-lock.json`. See [Lockfiles written in CI](#lockfiles-written-in-ci). |
 
 Unknown keys and invalid values never fail a job. Harden-Runner prints a notice that starts with `secure-registry:` and uses the default.
 
 ### Common setups
 
-Try it without breaking builds:
+Try it without breaking builds. The job summary lists what the block list and the compromised check would have refused. Cooldown holds are not reported in audit mode yet.
 
 ```yaml
     secure-registry: |
@@ -215,7 +217,7 @@ Packages restored from a cache are not downloaded, so Secure Registry never sees
 
 Network events can still show `registry.npmjs.org` or `registry.yarnpkg.com`. This is expected when:
 
-* Corepack, `pnpm/action-setup` or `pnpm/setup` downloads the package manager itself,
+* Corepack downloads the package manager named in `packageManager` (pnpm or Yarn) itself,
 * a package manager that is not fully covered downloads packages (see the table above),
 * `actions/setup-node` with `registry-url: https://registry.npmjs.org` replaces the npm configuration. Harden-Runner adds an annotation when this happens.
 
