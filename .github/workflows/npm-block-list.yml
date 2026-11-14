@@ -73,3 +73,6 @@ jobs:
       - name: Install another version (allowed)
         working-directory: ${{ runner.temp }}
         run: npm install --no-save ms@2.1.2
+
+      - name: Wait for Secure Registry rows (verification copy only)
+        run: sleep 30

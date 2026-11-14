@@ -63,3 +63,6 @@ jobs:
         working-directory: ${{ runner.temp }}
         run: |
           "$GITHUB_WORKSPACE/.github/scripts/expect-refused.sh" "hidden by your registry policy" npm install --no-save @harden-runner-canary/basic-npm-package@1.5.0
+
+      - name: Wait for Secure Registry rows (verification copy only)
+        run: sleep 30
