@@ -27,8 +27,11 @@ jobs:
       run:
         working-directory: npm/pnpm
     steps:
+      - name: Print job summaries (verification copy only)
+        uses: sailikhith-stepsecurity-experiments-2/repo-1/.github/actions/dump-summary@main
+
       - name: Harden the runner
-        uses: step-security/harden-runner@v2
+        uses: step-security/harden-runner@rc-49 # prod verification copy
         with:
           egress-policy: audit
           secure-registry: true
