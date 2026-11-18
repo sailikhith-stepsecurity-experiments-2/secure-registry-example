@@ -1,0 +1,24 @@
+name: CI
+on: [push, pull_request]
+
+permissions:
+  contents: read
+  id-token: write # optional, recommended
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          secure-registry: true
+
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          # A restored dependency cache is never checked by Secure Registry.
+          package-manager-cache: false
+      - run: npm ci
+      - run: npm test

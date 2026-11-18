@@ -1,0 +1,168 @@
+# Release sanity copy: checks the claims on the Community Tier docs page with harden-runner@v2.
+name: "docs: sanity"
+on:
+  push:
+    branches: [release-v2.23.0]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  config:
+    name: "config: ${{ matrix.name }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: full-example
+            sr: |
+              ecosystems: all             # or a list such as [npm]
+              ecosystem-defaults:         # every covered ecosystem
+                mode: enforce
+                cooldown:
+                  days: 2
+              npm:                        # npm only, overrides ecosystem-defaults
+                cooldown:
+                  days: 5
+                  exemptions:
+                    - "@example-org/*"
+                    - "left-pad@1.3.1"
+                block-list:
+                  - "example-pkg@1.0.4"
+          - name: audit-everywhere
+            sr: |
+              ecosystem-defaults:
+                mode: audit
+          - name: cooldown-7
+            sr: |
+              npm:
+                cooldown:
+                  days: 7
+          - name: exemptions
+            sr: |
+              npm:
+                cooldown:
+                  exemptions:
+                    - "@example-org/*"
+          - name: cooldown-0
+            sr: |
+              npm:
+                cooldown:
+                  days: 0
+          - name: npm-off
+            sr: |
+              npm:
+                mode: off
+          - name: invalid-values
+            sr: |
+              npm:
+                cooldown:
+                  days: 45
+              not-a-key: 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: sailikhith-stepsecurity-experiments-2/repo-1/.github/actions/dump-summary@main
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          secure-registry: ${{ matrix.sr }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - run: echo "registry=$(npm config get registry)"
+      - run: npm ci
+        working-directory: npm/app
+      - name: Latest nightly TypeScript (cooldown probe)
+        id: nightly
+        run: .github/scripts/npm/typescript-nightly.sh
+      - name: Install it
+        working-directory: ${{ runner.temp }}
+        run: npm install --no-save "typescript@${{ steps.nightly.outputs.version }}" 2>&1 | tail -5 || true
+
+  egress-block:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: block
+          allowed-endpoints: >
+            github.com:443
+            api.github.com:443
+          secure-registry: true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - run: npm ci && npm test
+        working-directory: npm/app
+
+  os:
+    name: "os: ${{ matrix.os }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          secure-registry: true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - run: echo "registry=$(npm config get registry)"
+      - run: npm ci && npm test
+        working-directory: npm/app
+      - name: Compromised example from the docs (chalk@5.6.1)
+        working-directory: ${{ runner.temp }}
+        run: |
+          npm install --no-save is-number@7.0.0
+          if npm install --no-save chalk@5.6.1 > c.log 2>&1; then cat c.log; echo "::error::chalk@5.6.1 installed"; exit 1; fi
+          cat c.log
+
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    container: node:22
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          secure-registry: true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: echo "registry=$(npm config get registry)"
+      - run: npm ci && npm test
+        working-directory: npm/app
